@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pastelândia • Gerador de Pagamento PIX</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        pastelRed: {
+                            50: '#FFEBEE',
+                            100: '#FFCDD2',
+                            500: '#E53935',
+                            600: '#D32F2F',
+                            700: '#C62828',
+                            800: '#B71C1C',
+                            900: '#8B0000',
+                        },
+                        pastelYellow: {
+                            100: '#FFF9C4',
+                            300: '#FFE082',
+                            400: '#FFD54F',
+                            500: '#FFC107',
+                            600: '#FFB300',
+                        },
+                        pastelCream: {
+                            50: '#FFFEFA',
+                            100: '#FFF8E7',
+                            200: '#FFF3C4',
+                        }
+                    },
+                    fontFamily: {
+                        brand: ['Fredoka', 'sans-serif'],
+                        sans: ['Poppins', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Fontes Google (Fredoka para títulos festivos de pastelaria & Poppins para texto limpo) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome para Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- QRCode.js Library para geração do código no navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        body {
+            background-color: #FAF6ED;
+            background-image: radial-gradient(#FFD54F 0.75px, transparent 0.75px), radial-gradient(#FFD54F 0.75px, #FAF6ED 0.75px);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+        }
+
+        .pastel-shadow {
+            box-shadow: 0 10px 30px -5px rgba(198, 40, 40, 0.15), 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .pastel-card-border {
+            border: 2px solid #FFE082;
+        }
+
+        /* Efeito de brilho suave para o card */
+        .glow-effect {
+            position: relative;
+        }
+        .glow-effect::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(45deg, #D32F2F, #FFC107, #D32F2F);
+            border-radius: 1.5rem;
+            z-index: -1;
+            opacity: 0.3;
+            filter: blur(8px);
+        }
+
+        /* Animação de notificação (Toast) */
+        @keyframes slideUp {
+            from { transform: translateY(100%) translateX(-50%); opacity: 0; }
+            to { transform: translateY(0) translateX(-50%); opacity: 1; }
+        }
+        .animate-toast {
+            animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800 min-h-screen flex flex-col justify-between p-3 sm:p-6 md:p-8">
+
+    <!-- TOAST DE NOTIFICAÇÃO (COPIADO COM SUCESSO) -->
+    <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl z-50 flex items-center space-x-3 border border-pastelYellow-500 animate-toast">
+        <div class="w-7 h-7 bg-emerald-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
+            <i class="fa-solid fa-check"></i>
+        </div>
+        <span class="font-medium text-sm sm:text-base">Código PIX copiado para a área de transferência!</span>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div class="max-w-4xl mx-auto w-full my-auto">
+        
+        <!-- HEADER / IDENTIDADE VISUAL PASTELÂNDIA -->
+        <header class="text-center mb-6 sm:mb-8">
+            <div class="inline-flex items-center justify-center bg-gradient-to-r from-pastelRed-700 via-pastelRed-600 to-pastelRed-800 text-white px-6 py-3 rounded-full shadow-lg border-2 border-pastelYellow-400 mb-3 transform hover:scale-105 transition-transform duration-200">
+                <!-- SVG Ilustrativo de Pastel Recheado Dourado -->
+                <svg class="w-8 h-8 mr-3 text-pastelYellow-400 filter drop-shadow" viewBox="0 0 64 64" fill="currentColor">
+                    <path d="M60 38C60 48 48 54 32 54C16 54 4 48 4 38C4 22 18 10 32 10C46 10 60 22 60 38Z" fill="#FFC107" stroke="#B71C1C" stroke-width="3"/>
+                    <path d="M8 38C8 36 12 34 16 34C20 34 24 36 28 36C32 36 36 34 40 34C44 34 48 36 52 36C56 36 60 38 60 38" fill="none" stroke="#D32F2F" stroke-width="2.5" stroke-linecap="round"/>
+                    <circle cx="20" cy="24" r="2" fill="#B71C1C"/>
+                    <circle cx="32" cy="20" r="2" fill="#B71C1C"/>
+                    <circle cx="44" cy="24" r="2" fill="#B71C1C"/>
+                </svg>
+                <h1 class="font-brand text-2xl sm:text-3xl tracking-wide uppercase font-bold text-pastelYellow-300 drop-shadow">
+                    PASTELÂNDIA
+                </h1>
+            </div>
+            <p class="text-gray-600 font-medium text-sm sm:text-base flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-location-dot text-pastelRed-600"></i>
+                Unidade Contagem - MG &bull; Pagamento Instantâneo PIX
+            </p>
+        </header>
+
+        <!-- CARTÃO PRINCIPAL -->
+        <div class="glow-effect bg-white rounded-3xl p-5 sm:p-8 border border-pastelYellow-300 shadow-2xl grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-start">
+            
+            <!-- COLUNA DA ESQUERDA: ENTRADA DE VALOR E DADOS FIXOS DA CHAVE -->
+            <div class="md:col-span-6 flex flex-col justify-between space-y-5">
+                
+                <!-- BADGE DA CHAVE FIXA -->
+                <div class="bg-pastelCream-100 rounded-2xl p-4 border border-pastelYellow-400">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold tracking-wider uppercase text-pastelRed-800 bg-pastelYellow-300 px-2.5 py-1 rounded-md flex items-center gap-1">
+                            <i class="fa-solid fa-lock text-xs"></i> Chave PIX Fixa
+                        </span>
+                        <span class="text-xs text-gray-500 font-semibold">CPF Cadastrado</span>
+                    </div>
+
+                    <div class="space-y-1.5 mt-2">
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600">Chave CPF:</span>
+                            <span class="font-mono font-bold text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-200">
+                                021.587.336-08
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600">Beneficiário:</span>
+                            <span class="font-bold text-pastelRed-800">PASTELANDIA</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600">Cidade:</span>
+                            <span class="font-medium text-gray-800">Contagem - MG</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAMPO ÚNICO DE ENTRADA: VALOR EM R$ -->
+                <div class="space-y-2">
+                    <label for="valorInput" class="block text-sm font-bold text-gray-800 uppercase tracking-wide flex items-center justify-between">
+                        <span><i class="fa-solid fa-calculator text-pastelRed-600 mr-1.5"></i> Valor do Pedido (R$)</span>
+                        <span class="text-xs font-normal text-pastelRed-700 bg-pastelRed-50 px-2 py-0.5 rounded-full border border-pastelRed-100">Obrigatório</span>
+                    </label>
+                    
+                    <div class="relative rounded-2xl shadow-sm">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                            <span class="text-pastelRed-700 font-bold text-xl sm:text-2xl">R$</span>
+                        </div>
+                        <input type="text" 
+                               id="valorInput" 
+                               inputmode="numeric" 
+                               placeholder="0,00" 
+                               maxlength="12"
+                               class="block w-full rounded-2xl border-2 border-pastelYellow-400 pl-14 pr-4 py-3.5 text-2xl sm:text-3xl font-bold text-gray-900 placeholder-gray-300 focus:border-pastelRed-600 focus:ring-4 focus:ring-pastelRed-100 outline-none transition-all"
+                               oninput="formatarMoeda(this); atualizarPix();">
+                    </div>
+                    <p class="text-xs text-gray-500 pl-1">Digite o valor consumido para gerar a cobrança direta.</p>
+                </div>
+
+                <!-- ATALHOS RÁPIDOS DE VALOR (PERFEITO PARA PASTELARIA) -->
+                <div>
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Sugestões Rápidas:</span>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="setValorPreset(5.00)" class="bg-pastelCream-100 hover:bg-pastelYellow-400 text-pastelRed-800 font-semibold py-2 px-2 rounded-xl border border-pastelYellow-400 text-sm transition-all active:scale-95">
+                            + R$ 5,00
+                        </button>
+                        <button onclick="setValorPreset(10.00)" class="bg-pastelCream-100 hover:bg-pastelYellow-400 text-pastelRed-800 font-semibold py-2 px-2 rounded-xl border border-pastelYellow-400 text-sm transition-all active:scale-95">
+                            + R$ 10,00
+                        </button>
+                        <button onclick="setValorPreset(15.00)" class="bg-pastelCream-100 hover:bg-pastelYellow-400 text-pastelRed-800 font-semibold py-2 px-2 rounded-xl border border-pastelYellow-400 text-sm transition-all active:scale-95">
+                            + R$ 15,00
+                        </button>
+                        <button onclick="setValorPreset(20.00)" class="bg-pastelCream-100 hover:bg-pastelYellow-400 text-pastelRed-800 font-semibold py-2 px-2 rounded-xl border border-pastelYellow-400 text-sm transition-all active:scale-95">
+                            + R$ 20,00
+                        </button>
+                        <button onclick="setValorPreset(30.00)" class="bg-pastelCream-100 hover:bg-pastelYellow-400 text-pastelRed-800 font-semibold py-2 px-2 rounded-xl border border-pastelYellow-400 text-sm transition-all active:scale-95">
+                            + R$ 30,00
+                        </button>
+                        <button onclick="limparValor()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2 px-2 rounded-xl border border-gray-300 text-sm transition-all active:scale-95 flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-eraser text-xs"></i> Limpar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- BOTÃO PRINCIPAL DE GERAÇÃO -->
+                <button onclick="gerarPixComEfeito()" 
+                        class="w-full bg-gradient-to-r from-pastelRed-700 via-pastelRed-600 to-pastelRed-800 hover:from-pastelRed-800 hover:to-pastelRed-900 text-white font-brand text-lg tracking-wider font-bold py-4 px-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center space-x-2 border border-pastelYellow-400">
+                    <i class="fa-solid fa-qrcode text-pastelYellow-400 text-xl"></i>
+                    <span>GERAR QR CODE PIX</span>
+                </button>
+
+            </div>
+
+            <!-- COLUNA DA DIREITA: RECEPTÁCULO DO QR CODE & COPIA E COLA -->
+            <div class="md:col-span-6 bg-gradient-to-b from-pastelCream-50 to-pastelCream-100 rounded-2xl p-5 sm:p-6 border-2 border-pastelYellow-300 flex flex-col items-center justify-center text-center relative shadow-inner">
+                
+                <!-- SEÇÃO DO QR CODE -->
+                <div class="w-full flex flex-col items-center">
+                    <div class="flex items-center space-x-2 mb-3">
+                        <!-- LOGO DO PIX EMBUTIDO -->
+                        <svg class="w-6 h-6 text-emerald-600" viewBox="0 0 512 512" fill="currentColor">
+                            <path d="M110.5 352h44.8l70.7-70.7 70.7 70.7h44.8l-93.1-93.1 93.1-93.1h-44.8L226 236.5 155.3 165.8h-44.8l93.1 93.1-93.1 93.1z"/>
+                            <path d="M380.2 110.5L256 234.7 131.8 110.5 32.5 209.8v92.4l99.3 99.3L256 277.3l124.2 124.2 99.3-99.3v-92.4l-99.3-99.3zM256 52.5l157.3 157.3v92.4L256 459.5 98.7 302.2v-92.4L256 52.5z"/>
+                        </svg>
+                        <span class="font-brand text-lg font-bold text-gray-800">Pagamento via PIX</span>
+                    </div>
+
+                    <!-- MOLDURA DO QR CODE COM CANTOS DOURADOS -->
+                    <div id="qrFrame" class="bg-white p-4 rounded-2xl shadow-md border-2 border-pastelYellow-400 relative mb-4 transition-all duration-300">
+                        <!-- QR Code Canvas / Img Container -->
+                        <div id="qrcodeCanvas" class="flex items-center justify-center min-w-[200px] min-h-[200px]">
+                            <!-- QR Code será inserido via JS aqui -->
+                        </div>
+                        
+                        <!-- Overlay Informativo Inicial -->
+                        <div id="qrPlaceholder" class="absolute inset-0 bg-white/95 rounded-xl flex flex-col items-center justify-center p-4 text-center">
+                            <div class="w-12 h-12 bg-pastelCream-200 text-pastelRed-700 rounded-full flex items-center justify-center text-xl font-bold mb-2">
+                                <i class="fa-solid fa-hand-holding-dollar"></i>
+                            </div>
+                            <p class="text-sm font-semibold text-gray-700">Informe um valor ao lado</p>
+                            <p class="text-xs text-gray-500 mt-1">O QR Code dinâmico será gerado automaticamente</p>
+                        </div>
+                    </div>
+
+                    <!-- DISPLAY DO VALOR ATUAL GERADO -->
+                    <div id="valorDisplayContainer" class="hidden mb-4 bg-white px-4 py-1.5 rounded-full border border-pastelYellow-400 shadow-sm">
+                        <span class="text-xs text-gray-500 font-semibold mr-1">Valor Total:</span>
+                        <span id="valorDisplay" class="font-bold text-pastelRed-800 text-lg">R$ 0,00</span>
+                    </div>
+
+                    <!-- CAMPO COPIA E COLA -->
+                    <div class="w-full space-y-2">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider text-left">
+                            PIX Copia e Cola (String EMV):
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <input type="text" 
+                                   id="pixCopiaColaInput" 
+                                   readonly 
+                                   placeholder="Aguardando valor para gerar o código..." 
+                                   class="w-full bg-white text-xs font-mono p-3 rounded-xl border border-gray-300 text-gray-700 focus:outline-none truncate select-all">
+                            
+                            <button id="btnCopiar" 
+                                    onclick="copiarPixPayload()" 
+                                    disabled
+                                    class="bg-pastelYellow-500 hover:bg-pastelYellow-600 disabled:bg-gray-200 text-pastelRed-900 font-bold px-4 py-3 rounded-xl border border-pastelYellow-600 transition-all text-sm flex items-center justify-center space-x-1 whitespace-nowrap shadow-sm active:scale-95">
+                                <i class="fa-regular fa-copy"></i>
+                                <span class="hidden sm:inline">Copiar</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BOTÃO DOWNLOAD QR CODE -->
+                    <div class="w-full mt-3">
+                        <button id="btnDownload" 
+                                onclick="baixarQrCode()" 
+                                disabled
+                                class="w-full bg-white hover:bg-gray-50 disabled:bg-gray-100 text-gray-700 disabled:text-gray-400 font-semibold py-2 px-4 rounded-xl border border-gray-300 text-xs transition-all flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Baixar Imagem do QR Code</span>
+                        </button>
+                    </div>
+
+                    <!-- INSTRUÇÕES RÁPIDAS -->
+                    <div class="mt-5 pt-4 border-t border-pastelYellow-300/60 w-full text-left text-xs text-gray-600 space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-pastelRed-700 text-white font-bold flex items-center justify-center text-[10px]">1</span>
+                            <span>Abra o aplicativo do seu banco preferido.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-pastelRed-700 text-white font-bold flex items-center justify-center text-[10px]">2</span>
+                            <span>Escolha a opção <strong>PIX</strong> e escaneie o código acima ou use o <strong>Copia e Cola</strong>.</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-pastelRed-700 text-white font-bold flex items-center justify-center text-[10px]">3</span>
+                            <span>Confira os dados do destinatário (<strong>PASTELANDIA</strong>) e confirme.</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- RODAPÉ DA APLICAÇÃO -->
+        <footer class="mt-8 text-center text-xs text-gray-500 space-y-1">
+            <p class="font-medium text-gray-600">Pastelândia Contagem &copy; 2026 - Todos os direitos reservados</p>
+            <p>Chave PIX oficial registrada sob o CPF 02158733608 &bull; Padrão BR Code EMV Banco Central</p>
+        </footer>
+
+    </div>
+
+    <!-- SCRIPT DE LÓGICA DO PIX EMV BR CODE & INTERAÇÕES DA UI -->
+    <script>
+        /**
+         * PARÂMETROS FIXOS DO PIX PASTELÂNDIA
+         */
+        const PIX_CONFIG = {
+            chave: "02158733608",          // CPF Fixado conforme solicitação
+            nome: "PASTELANDIA",           // Merchant Name (Máx 25 chars, sem acentos)
+            cidade: "CONTAGEM",            // Merchant City (Máx 15 chars, sem acentos)
+            gui: "br.gov.bcb.pix",         // Identificador do BCB
+            mcc: "0000",                   // Merchant Category Code
+            moeda: "986"                   // Código Real Brasileiro (BRL)
+        };
+
+        let qrCodeInstance = null;
+
+        /**
+         * MÁSCARA AUTOMÁTICA DE MOEDA (R$)
+         * Transforma digitação contínua em formato monetário (ex: 1500 -> R$ 15,00)
+         */
+        function formatarMoeda(input) {
+            let value = input.value.replace(/\D/g, '');
+            if (!value) {
+                input.value = '';
+                return;
+            }
+            
+            let floatValue = (parseInt(value, 10) / 100).toFixed(2);
+            input.value = parseFloat(floatValue).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        /**
+         * EXTRAI O VALOR FLOAT DO CAMPO DE TEXTO FORMATADO
+         */
+        function getValorFloat() {
+            const input = document.getElementById('valorInput');
+            if (!input.value) return 0;
+            const cleanStr = input.value.replace(/\./g, '').replace(',', '.');
+            return parseFloat(cleanStr) || 0;
+        }
+
+        /**
+         * BOTAO DE ATALHO PARA VALORES PREDEFINIDOS
+         */
+        function setValorPreset(valorAdicional) {
+            const atual = getValorFloat();
+            const novoValor = (atual + valorAdicional).toFixed(2);
+            
+            const input = document.getElementById('valorInput');
+            input.value = parseFloat(novoValor).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+            atualizarPix();
+        }
+
+        /**
+         * LIMPA O CAMPO DE VALOR
+         */
+        function limparValor() {
+            const input = document.getElementById('valorInput');
+            input.value = '';
+            atualizarPix();
+        }
+
+        /**
+         * CÁLCULO DO ALGORITMO CRC16-CCITT (0xFFFF / POLY 0x1021)
+         * Exigido pelas especificações oficiais do Banco Central do Brasil para PIX EMV
+         */
+        function calcularCRC16(str) {
+            let crc = 0xFFFF;
+            const polynomial = 0x1021;
+
+            for (let i = 0; i < str.length; i++) {
+                let c = str.charCodeAt(i);
+                for (let b = 0; b < 8; b++) {
+                    let bit = ((c >> (7 - b)) & 1) === 1;
+                    let c15 = ((crc >> 15) & 1) === 1;
+                    crc <<= 1;
+                    if (c15 ^ bit) {
+                        crc ^= polynomial;
+                    }
+                }
+            }
+            return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+        }
+
+        /**
+         * CONSTRUTOR DA STRING DO PAYLOAD PIX BR CODE (EMV QRCPS)
+         */
+        function gerarPixPayload(valor) {
+            // Formatar ID e Tamanho (Campos EMV)
+            const formatEMV = (id, value) => {
+                const len = value.length.toString().padStart(2, '0');
+                return `${id}${len}${value}`;
+            };
+
+            // Tag 00: Payload Format Indicator
+            const payloadFormat = formatEMV('00', '01');
+
+            // Tag 26: Merchant Account Information
+            const guiStr = formatEMV('00', PIX_CONFIG.gui);
+            const keyStr = formatEMV('01', PIX_CONFIG.chave);
+            const merchantInfo = formatEMV('26', guiStr + keyStr);
+
+            // Tag 52: Merchant Category Code
+            const mcc = formatEMV('52', PIX_CONFIG.mcc);
+
+            // Tag 53: Transaction Currency (986 = BRL)
+            const currency = formatEMV('53', PIX_CONFIG.moeda);
+
+            // Tag 54: Transaction Amount (Se houver valor definido)
+            let amountStr = '';
+            if (valor > 0) {
+                amountStr = formatEMV('54', valor.toFixed(2));
+            }
+
+            // Tag 58: Country Code
+            const country = formatEMV('58', 'BR');
+
+            // Tag 59: Merchant Name (Remover caracteres especiais)
+            const cleanName = PIX_CONFIG.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            const name = formatEMV('59', cleanName);
+
+            // Tag 60: Merchant City (Remover caracteres especiais)
+            const cleanCity = PIX_CONFIG.cidade.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            const city = formatEMV('60', cleanCity);
+
+            // Tag 62: Additional Data Field Template (TxID *** para QR Estático)
+            const txid = formatEMV('05', '***');
+            const additionalData = formatEMV('62', txid);
+
+            // Montar string sem o CRC
+            const payloadWithoutCRC = `${payloadFormat}${merchantInfo}${mcc}${currency}${amountStr}${country}${name}${city}${additionalData}6304`;
+
+            // Calcular o CRC16 e anexar ao final
+            const crc = calcularCRC16(payloadWithoutCRC);
+            
+            return `${payloadWithoutCRC}${crc}`;
+        }
+
+        /**
+         * GERAÇÃO DO QR CODE E ATUALIZAÇÃO DOS CAMPOS DA TELA
+         */
+        function atualizarPix() {
+            const valor = getValorFloat();
+            const placeholder = document.getElementById('qrPlaceholder');
+            const copiaColaInput = document.getElementById('pixCopiaColaInput');
+            const btnCopiar = document.getElementById('btnCopiar');
+            const btnDownload = document.getElementById('btnDownload');
+            const valorDisplayContainer = document.getElementById('valorDisplayContainer');
+            const valorDisplay = document.getElementById('valorDisplay');
+            const qrCanvasContainer = document.getElementById('qrcodeCanvas');
+
+            // Se o valor for 0 ou inválido, desabilita a exibição do QR Code
+            if (valor <= 0) {
+                placeholder.classList.remove('hidden');
+                valorDisplayContainer.classList.add('hidden');
+                copiaColaInput.value = '';
+                btnCopiar.disabled = true;
+                btnDownload.disabled = true;
+                qrCanvasContainer.innerHTML = '';
+                return;
+            }
+
+            // Oculta placeholder e exibe valor
+            placeholder.classList.add('hidden');
+            valorDisplayContainer.classList.remove('hidden');
+            valorDisplay.textContent = `R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // Gerar Payload EMV
+            const pixPayload = gerarPixPayload(valor);
+            copiaColaInput.value = pixPayload;
+            btnCopiar.disabled = false;
+            btnDownload.disabled = false;
+
+            // Renderizar QR Code no Canvas
+            qrCanvasContainer.innerHTML = '';
+            qrCodeInstance = new QRCode(qrCanvasContainer, {
+                text: pixPayload,
+                width: 210,
+                height: 210,
+                colorDark: "#8B0000", // Vermelho profundo refinado para alta escaneabilidade
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+
+        /**
+         * EFEITO DE CLIQUE NO BOTÃO PRINCIPAL DE GERAR
+         */
+        function gerarPixComEfeito() {
+            const valor = getValorFloat();
+            const input = document.getElementById('valorInput');
+
+            if (valor <= 0) {
+                input.focus();
+                input.classList.add('border-pastelRed-600', 'animate-pulse');
+                setTimeout(() => {
+                    input.classList.remove('animate-pulse');
+                }, 1000);
+                return;
+            }
+
+            atualizarPix();
+
+            // Rolar suavemente até o QR Code em telas menores (mobile)
+            if (window.innerWidth < 768) {
+                document.getElementById('qrFrame').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        /**
+         * COPIAR CÓDIGO PIX PARA A ÁREA DE TRANSFERÊNCIA (COMPATÍVEL COM IFRAMES)
+         */
+        function copiarPixPayload() {
+            const input = document.getElementById('pixCopiaColaInput');
+            if (!input.value) return;
+
+            // Tenta usar Navigator Clipboard API, com fallback para execCommand
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(input.value)
+                    .then(() => dispararToast())
+                    .catch(() => fallbackCopiar(input));
+            } else {
+                fallbackCopiar(input);
+            }
+        }
+
+        function fallbackCopiar(input) {
+            input.select();
+            input.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            dispararToast();
+        }
+
+        /**
+         * DISPARA O TOAST DE SUCESSO
+         */
+        function dispararToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        /**
+         * FAZ DOWNLOAD DO QR CODE COMO IMAGEM PNG
+         */
+        function baixarQrCode() {
+            const qrCanvas = document.querySelector('#qrcodeCanvas canvas');
+            const qrImg = document.querySelector('#qrcodeCanvas img');
+            
+            let dataUrl = '';
+            if (qrCanvas) {
+                dataUrl = qrCanvas.toDataURL('image/png');
+            } else if (qrImg) {
+                dataUrl = qrImg.src;
+            }
+
+            if (!dataUrl) return;
+
+            const valor = getValorFloat().toFixed(2).replace('.', '_');
+            const downloadLink = document.createElement('a');
+            downloadLink.href = dataUrl;
+            downloadLink.download = `Pix-Pastelandia-R$${valor}.png`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    </script>
+</body>
+</html>
