@@ -324,7 +324,18 @@
          * PARÂMETROS FIXOS DO PIX PASTELÂNDIA
          */
         const PIX_CONFIG = {
-            chave: "02158733608",          // CPF Fixado conforme solicitação
+            // A chave Pix NÃO fica no código (repositório público). Ela é pedida uma vez
+            // neste aparelho e guardada no localStorage. Para trocar: limpe o site ou chame
+            // localStorage.removeItem('pastelandia_pix_key') no console.
+            get chave() {
+                let k = '';
+                try { k = localStorage.getItem('pastelandia_pix_key') || ''; } catch (e) {}
+                if (!k) {
+                    k = (window.prompt('Informe a chave Pix da Pastelândia (CNPJ, e-mail, telefone ou chave aleatória):') || '').trim();
+                    if (k) { try { localStorage.setItem('pastelandia_pix_key', k); } catch (e) {} }
+                }
+                return k;
+            },
             nome: "PASTELANDIA",           // Merchant Name (Máx 25 chars, sem acentos)
             cidade: "CONTAGEM",            // Merchant City (Máx 15 chars, sem acentos)
             gui: "br.gov.bcb.pix",         // Identificador do BCB
